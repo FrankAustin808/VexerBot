@@ -1,63 +1,57 @@
 from __future__ import annotations
-import discord
-import os
-import sys
-import random
-import asyncio
-import datetime, time
-
-from datetime import timedelta, datetime
+from discord.ext import commands
+from datetime import datetime, timedelta
+from discord import Interaction
 from typing import Optional
+from logging import getLogger; log = getLogger("Bot")
 from .embed import Embed
-from discord.ext import commands, tasks
-from logging import getLogger
-from discord import Member, Interaction
 from tortoise import Tortoise
 from config import *
 
-log = getLogger("Bot")
+import discord
+import os
+import sys
 
 __all__ = (
     "Bot",
 )
 
-start_time = time.time()
-
 client = discord.client
 
-def restart_vex():
+def restart_me():
     os.execv(sys.executable, ['pythob'] + sys.argv)
-    
+
 class Bot(commands.AutoShardedBot):
     def __init__(self):
         super().__init__(
-            command_prefix="^",
-            intents=discord.Intents.all(),
-            chunk_guild_at_startup=False,
-            help_command=None
+            command_prefix= '^',
+            intents= discord.Intents.all(),
+            chunk_guild_at_startup= False
         )
         
-    #async def setup_hook(self) -> None:
-    
+    async def setup_hook(self) -> None:
+        for file in os.listdir('cogs'):
+            if not file.startswith("_"):
+                await self.load_extension(f"cogs.{file}.plugin")
+        
     async def on_ready(self) -> None:
         members = 0
         for guild in self.guilds:
-            members += guild.member_count - 1 
-            
-        await self.change_presence(activity=discord.Game(name=f"On {len(self.guilds)} Servers | {VERSION}"))  
-        log.info(f"Logged in as {self.user}")
+             members += guild.member_count - 1
+
+        await self.change_presence(activity=discord.Game(name=f"On {len(self.guilds)} Servers | {VERSION} | /help"))
+        log.info(f"Logged in as {self.user} (ID: {self.user.id})")
         self.tree.sync
-        print(f"Vex is on {len(self.guilds)} servers!")
-    
+        
     async def on_connect(self) -> None:
         if '-sync' in sys.argv:
             synced_commands = await self.tree.sync()
             log.info(f"Successfully synced {len(synced_commands)} commands! 🙃")
             
         if datetime.now().hour == 23 and datetime.now().minute == 59:
-            restart_vex()
-            
-    async def success(
+            restart_me()
+    
+async def success(
             self,
             message: str,
             interaction: discord.Interaction,
@@ -89,7 +83,7 @@ class Bot(commands.AutoShardedBot):
                 return await interaction.response.send_message(content=f"✔️ | {message}", ephemeral=ephemeral)
 
 
-    async def error(
+async def error(
             self,
             message: str,
             interaction: discord.Interaction,
@@ -119,7 +113,3 @@ class Bot(commands.AutoShardedBot):
                 if interaction.response.is_done():
                     return await interaction.followup.send(content=f"✖️ | {message}", ephemeral=ephemeral)
                 return await interaction.response.send_message(content=f"✖️ | {message}", ephemeral=ephemeral)
-            
-    
-
-     
